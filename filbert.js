@@ -940,6 +940,66 @@
     return finishToken(_num, val);
   }
 
+  // Apply correct string method
+
+  function applyStringMethod(method, str) {
+    switch (method) {
+      case "lower":
+        return finishToken(_string, str.toLowerCase());
+      case "upper":
+        return finishToken(_string, str.toUpperCase());
+      case "capitalize":
+        str = str[0].toUpperCase() + str.slice(1).toLowerCase();
+        return finishToken(_string, str);
+      case "isalnum":
+        // TODO: what to do for boolean results
+        return finishToken(_string, str.length > 0 && str.match(/^[0-9a-zA-Z]+$/) ? "true" : "false");
+      case "isalpha":
+        return finishToken(_string, str.length > 0 && str.match(/^[a-zA-Z]+$/) ? "true" : "false");
+      case "isdigit":
+        return finishToken(_string, str.length > 0 && str.match(/^[0-9]+$/) ? "true" : "false");
+      case "islower":
+        return finishToken(_string, str == str.toLowerCase() ? "true" : "false");
+      case "isspace":
+        return finishToken(_string, str.length > 0 && str.match(/^[ \t\n]+$/) ? "true" : "false");
+      case "istitle":
+        return finishToken(_string, str == str.replace(/\b\w+/g,function(s){return s.charAt(0).toUpperCase() + s.substr(1).toLowerCase();}) ? "true" : "false");
+      case "isupper":
+        return finishToken(_string, str == str.toUpperCase() ? "true" : "false");
+      case "swapcase":
+        str = str.replace(/([a-z])|([A-Z])/g, function(a, b, c){return b ? a.toUpperCase() : a.toLowerCase()})
+        return finishToken(_string, str);
+      case "title":
+        str = str.replace(/\b\w+/g,function(s){return s.charAt(0).toUpperCase() + s.substr(1).toLowerCase();});
+        return finishToken(_string, str);
+      default:
+        raise(tokStart, "Unsupported string method '" + method + "'");
+    }
+  }
+
+  // Read a string method
+
+  function readStringMethod(str) {
+    tokPos++;
+    var method = "";
+    for (;;tokPos++) {
+      if (tokPos >= inputLen) raise(tokStart, "Unterminated string method");
+      var ch = input.charAt(tokPos);
+      if (ch === '(') {
+        // TODO: Support methods with arguments
+        tokPos++
+        ch = input.charAt(tokPos);
+        if (ch === ')') {
+          tokPos++
+          return applyStringMethod(method, str);
+        } else {
+          raise(tokStart, "String methods with arguments are not supported");
+        }
+      }
+      method += ch;
+    }
+  }
+
   // Read a string value, interpreting backslash-escapes.
 
   function readString(quote) {
@@ -950,6 +1010,9 @@
       var ch = input.charCodeAt(tokPos);
       if (ch === quote) {
         ++tokPos;
+        if (input.charCodeAt(tokPos) === 46) {
+          return readStringMethod(out);
+        }
         return finishToken(_string, out);
       }
       if (ch === 92) { // '\'
